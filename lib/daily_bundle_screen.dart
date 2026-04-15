@@ -25,6 +25,7 @@ class _DailyBundleScreenState extends State<DailyBundleScreen> {
   double _missionProgress = 50;
   int _currentMissionNumber = 3;
   bool _orbFTUE = false;
+  bool _completedOrb = false;
   String _subject = 'math';
   double _starNumber = 2;
   double _orbFlagNumber = 0;
@@ -67,6 +68,7 @@ class _DailyBundleScreenState extends State<DailyBundleScreen> {
       'currentMissionNumber (Number)': vm.number('currentMissionNumber') != null,
       'cgPackName (String)': vm.string('cgPackName') != null,
       'subject (Enum)': vm.enumerator('subject') != null,
+      'completedOrb (Boolean)': vm.boolean('completedOrb') != null,
       'startCelebration (Trigger)': vm.trigger('startCelebration') != null,
       'start (Trigger)': vm.trigger('start') != null,
       'propertyOfOrbVM (ViewModel)': orbVm != null,
@@ -89,6 +91,7 @@ class _DailyBundleScreenState extends State<DailyBundleScreen> {
     vm.number('currentMissionNumber')?.value = _currentMissionNumber.toDouble();
     vm.string('cgPackName')?.value = 'math';
     vm.enumerator('subject')?.value = _subject;
+    vm.boolean('completedOrb')?.value = _completedOrb;
     orbVm?.number('starNumber')?.value = _starNumber;
     orbVm?.number('orbFlagNumber')?.value = _orbFlagNumber;
     podiumVm?.string('podiumNameText')?.value = 'Hero';
@@ -282,6 +285,17 @@ class _DailyBundleScreenState extends State<DailyBundleScreen> {
               onChanged: (v) {
                 setState(() => _orbFTUE = v);
                 _riveVm?.boolean('orbFTUE')?.value = v;
+              },
+            ),
+            SwitchListTile(
+              title: const Text('completedOrb',
+                  style: TextStyle(color: Colors.white, fontSize: 13)),
+              value: _completedOrb,
+              activeThumbColor: Colors.deepPurple,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (v) {
+                setState(() => _completedOrb = v);
+                _riveVm?.boolean('completedOrb')?.value = v;
               },
             ),
             const SizedBox(height: 8),
