@@ -11,11 +11,18 @@ class DailyBundleScreen extends StatefulWidget {
 class _DailyBundleScreenState extends State<DailyBundleScreen> {
   static const _riveUrl =
       'https://staging-cdn.splashmath.com/assets/magical-dashboard/rive/desktop/daily_bundle.riv';
+  static const _riveAsset = 'assets/images/dailybundle.riv';
+  static const _useLocalAsset = true;
 
-  late final FileLoader _fileLoader = FileLoader.fromUrl(
-    _riveUrl,
-    riveFactory: Factory.rive,
-  );
+  late final FileLoader _fileLoader = _useLocalAsset
+      ? FileLoader.fromAsset(
+          _riveAsset,
+          riveFactory: Factory.rive,
+        )
+      : FileLoader.fromUrl(
+          '$_riveUrl?cacheBust=${DateTime.now().millisecondsSinceEpoch}',
+          riveFactory: Factory.rive,
+        );
   StateMachine? _stateMachine;
   ViewModelInstance? _riveVm;
   Map<String, bool> _bindings = {};
