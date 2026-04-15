@@ -92,20 +92,20 @@ class _RiveTestScreenState extends State<RiveTestScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Test Dialog Interference',
-          style: TextStyle(fontSize: 18),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: _showNormalDialog,
-          child: const Text('Show Normal Dialog'),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: _startAnimation,
-          child: const Text('Show Rive Animation Dialog'),
-        ),
+        // const Text(
+        //   'Test Dialog Interference',
+        //   style: TextStyle(fontSize: 18),
+        // ),
+        // const SizedBox(height: 20),
+        // ElevatedButton(
+        //   onPressed: _showNormalDialog,
+        //   child: const Text('Show Normal Dialog'),
+        // ),
+        // const SizedBox(height: 20),
+        // ElevatedButton(
+        //   onPressed: _startAnimation,
+        //   child: const Text('Show Rive Animation Dialog'),
+        // ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () => Navigator.of(context).push(
@@ -116,11 +116,11 @@ class _RiveTestScreenState extends State<RiveTestScreen> {
           child: const Text('Test daily_bundle.riv'),
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Test: Show normal dialog first, close it, then show Rive dialog',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
-        ),
+        // const Text(
+        //   'Test: Show normal dialog first, close it, then show Rive dialog',
+        //   textAlign: TextAlign.center,
+        //   style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+        // ),
       ],
     );
   }
