@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
 import 'daily_bundle_screen.dart';
+import 'milestone_rive_item.dart';
 import 'rive_dialog.dart';
 
 void main() {
@@ -114,6 +115,15 @@ class _RiveTestScreenState extends State<RiveTestScreen> {
             ),
           ),
           child: const Text('Test daily_bundle.riv'),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const MilestoneRiveItem(),
+            ),
+          ),
+          child: const Text('Test l2_full_path.riv'),
         ),
         const SizedBox(height: 20),
         // const Text(
