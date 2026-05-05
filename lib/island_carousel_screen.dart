@@ -15,12 +15,25 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
   static const String _artboardName = 'islandArtBoard';
   static const String _stateMachineName = 'islandSM';
 
+  // Static finals — created once, same instance on every build.
+  // RiveWidgetBuilder.didUpdateWidget sees no change → no Rive reinitialization.
+  static final _artboardSelector = ArtboardSelector.byName(_artboardName);
+  static final _stateMachineSelector =
+      StateMachineSelector.byName(_stateMachineName);
+
   late PageController _pageController;
   bool _pageControllerInitialized = false;
-  int _currentPage = 0;
+
+  // ValueNotifier drives nav buttons and title without rebuilding the PageView.
+  final _currentPageNotifier = ValueNotifier<int>(0);
+  int get _currentPage => _currentPageNotifier.value;
+
   int _lastRivePage = 0;
 
   late final List<FileLoader> _fileLoaders;
+  // One DataBind per island, created once in initState — stable across builds.
+  late final List<DataBind> _dataBinds;
+
   final Map<int, RiveWidgetController> _controllers = {};
   final Map<int, ViewModelInstance> _viewModels = {};
   final Set<int> _initializingControllers = {};
@@ -31,12 +44,12 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
   @override
   void initState() {
     super.initState();
-    // viewportFraction is computed responsively on first build; use a placeholder here
     _pageController = PageController(viewportFraction: 0.5, initialPage: 0);
     _fileLoaders = List.generate(
       _islandCount,
       (i) => FileLoader.fromAsset(_assetForIndex(i), riveFactory: Factory.rive),
     );
+    _dataBinds = List.generate(_islandCount, (_) => DataBind.auto());
   }
 
   void _navigateTo(int page) {
@@ -48,17 +61,15 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
     );
   }
 
-  // Fires at 0.5 threshold during drag — matches carousel_islands.dart flicker fix attempt
+  // Fires at the 0.5 threshold during drag.
+  // No setState — the PageView tree never rebuilds while scrolling.
   void _onPageScrolled() {
     if (!_pageController.hasClients) return;
     final page = _pageController.page ?? 0;
     final rounded = page.round();
     if (rounded != _lastRivePage) {
       _lastRivePage = rounded;
-      setState(()  {
-        _currentPage = rounded;
-        print('setstate: Page scrolled to $page (rounded: $rounded). Current page: $_currentPage. Paused islands: $_pausedIslands');
-      });
+      _currentPageNotifier.value = rounded; // updates nav buttons / title only
       _applyStateForPage(rounded);
     }
   }
@@ -75,10 +86,7 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
       vm.trigger('start')?.trigger();
 
       if (isActive) {
-        // Mirrors _resumeAnimations in carousel_islands.dart
-        try {
-          controller.active = true;
-        } catch (_) {}
+        try { controller.active = true; } catch (_) {}
         _pausedIslands.remove(i);
       } else {
         _pausedIslands.add(i);
@@ -115,16 +123,15 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
   void dispose() {
     _pageController.removeListener(_onPageScrolled);
     _pageController.dispose();
+    _currentPageNotifier.dispose();
     for (final loader in _fileLoaders) {
       loader.dispose();
     }
     super.dispose();
   }
 
-  // Matches ResponsiveDimensions.islandContainerSize — always 800×800
   static const double _islandSize = 800.0;
 
-  // Mirrors ResponsiveDimensions.centerToCenterSpacing + _calculateViewportFraction
   double _viewportFraction(double screenWidth) {
     double spacing;
     if (screenWidth >= 1280.0) {
@@ -154,13 +161,18 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1A2744),
       appBar: AppBar(
-        title: Text('Island Carousel (${_currentPage + 1}/$_islandCount)'),
+        title: ValueListenableBuilder<int>(
+          valueListenable: _currentPageNotifier,
+          builder: (_, page, __) =>
+              Text('Island Carousel (${page + 1}/$_islandCount)'),
+        ),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
       body: Stack(
         children: [
-          // Clip.none lets islands overflow into neighbouring slots so all 3 are visible
+          // clipBehavior: Clip.none lets 800px islands overflow their slot
+          // so all 3 are visible simultaneously.
           PageView.builder(
             controller: _pageController,
             clipBehavior: Clip.none,
@@ -174,9 +186,8 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
                   if (_pageController.position.haveDimensions) {
                     distance = (_pageController.page! - index).abs();
                   }
-                  // Center island at 1.0, neighbours at 0.75
                   final scale = (1.0 - distance * 0.25).clamp(0.75, 1.0);
-                  // Smooth opacity — no binary jump
+                  // Smooth opacity — avoids binary jump that triggers Metal layer churn
                   final opacity =
                       (1.0 - distance.clamp(0.0, 1.0) * 0.2).clamp(0.8, 1.0);
                   return Transform.scale(
@@ -184,30 +195,35 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
                     child: Opacity(opacity: opacity, child: child),
                   );
                 },
+                // child is built once per parent build (not per animation frame).
+                // Stable DataBind / selectors → RiveWidgetBuilder never reinitializes.
                 child: _buildIsland(index),
               );
             },
           ),
-          // Left / right navigation buttons
+          // Only this Row rebuilds when the page changes.
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 40),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _NavButton(
-                    icon: Icons.chevron_left,
-                    enabled: _currentPage > 0,
-                    onTap: () => _navigateTo(_currentPage - 1),
-                  ),
-                  const SizedBox(width: 48),
-                  _NavButton(
-                    icon: Icons.chevron_right,
-                    enabled: _currentPage < _islandCount - 1,
-                    onTap: () => _navigateTo(_currentPage + 1),
-                  ),
-                ],
+              child: ValueListenableBuilder<int>(
+                valueListenable: _currentPageNotifier,
+                builder: (_, page, __) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _NavButton(
+                      icon: Icons.chevron_left,
+                      enabled: page > 0,
+                      onTap: () => _navigateTo(page - 1),
+                    ),
+                    const SizedBox(width: 48),
+                    _NavButton(
+                      icon: Icons.chevron_right,
+                      enabled: page < _islandCount - 1,
+                      onTap: () => _navigateTo(page + 1),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -217,8 +233,6 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
   }
 
   Widget _buildIsland(int index) {
-    // OverflowBox lets the 800×800 island escape the slot's tight constraints
-    // while staying centered. clipBehavior: Clip.none on PageView shows the overflow.
     return OverflowBox(
       alignment: Alignment.center,
       minWidth: 0,
@@ -227,13 +241,13 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
       maxHeight: _islandSize,
       child: SizedBox.square(
         dimension: _islandSize,
-        // RepaintBoundary gives each island its own Metal compositing layer
+        // Each island gets its own Metal compositing layer.
         child: RepaintBoundary(
           child: RiveWidgetBuilder(
             fileLoader: _fileLoaders[index],
-            dataBind: DataBind.auto(),
-            artboardSelector: ArtboardSelector.byName(_artboardName),
-            stateMachineSelector: StateMachineSelector.byName(_stateMachineName),
+            dataBind: _dataBinds[index],             // stable — created once in initState
+            artboardSelector: _artboardSelector,     // stable — static final
+            stateMachineSelector: _stateMachineSelector, // stable — static final
             onLoaded: (state) => _onIslandLoaded(index, state),
             builder: (context, state) {
               if (state is RiveLoaded) {
