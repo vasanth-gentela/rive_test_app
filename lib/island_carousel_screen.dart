@@ -55,7 +55,10 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
     final rounded = page.round();
     if (rounded != _lastRivePage) {
       _lastRivePage = rounded;
-      setState(() => _currentPage = rounded);
+      setState(()  {
+        _currentPage = rounded;
+        print('setstate: Page scrolled to $page (rounded: $rounded). Current page: $_currentPage. Paused islands: $_pausedIslands');
+      });
       _applyStateForPage(rounded);
     }
   }
@@ -85,40 +88,26 @@ class _IslandCarouselScreenState extends State<IslandCarouselScreen> {
 
   void _onIslandLoaded(int index, RiveLoaded state) {
     _controllers[index] = state.controller;
-    // viewModelInstance may not be ready yet — store it if available now
-    final immediateVm = state.viewModelInstance;
-    if (immediateVm != null) _viewModels[index] = immediateVm;
+    final vm = state.viewModelInstance;
+    if (vm != null) _viewModels[index] = vm;
     _initializingControllers.add(index);
 
-    // Mirror daily_bundle_screen.dart: wait 100ms for viewModel to be ready
-    Future.delayed(const Duration(milliseconds: 100), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _initializingControllers.remove(index);
 
-      ViewModelInstance? vm = _viewModels[index];
-
-      // Fallback: manually bind if RiveWidgetBuilder didn't surface a viewModel
-      if (vm == null) {
-        try {
-          vm = state.controller.dataBind(DataBind.auto());
-          _viewModels[index] = vm;
-        } catch (e) {
-          debugPrint('[Carousel] dataBind fallback failed for island $index: $e');
-        }
-      }
-
-      if (vm == null) {
-        debugPrint('[Carousel] viewModel still null for island $index — state not applied');
-        return;
-      }
+      final viewModel = _viewModels[index];
+      if (viewModel == null) return;
 
       final isActive = index == _currentPage;
-      vm.enumerator('status')?.value = isActive ? 'selected' : 'unselected';
-      vm.trigger('start')?.trigger();
+      viewModel.enumerator('status')?.value = isActive ? 'selected' : 'unselected';
+      viewModel.trigger('start')?.trigger();
       if (isActive) {
         try { state.controller.active = true; } catch (_) {}
       }
-      if (mounted) setState(() {});
+      if (mounted) setState(() {
+        print('setstate: Island $index loaded. Active: $isActive. Paused islands: $_pausedIslands');
+      });
     });
   }
 
