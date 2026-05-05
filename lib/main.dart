@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rive/rive.dart';
 import 'daily_bundle_screen.dart';
+import 'island_carousel_screen.dart';
 import 'milestone_rive_item.dart';
 import 'rive_dialog.dart';
 
@@ -124,6 +125,15 @@ class _RiveTestScreenState extends State<RiveTestScreen> {
             ),
           ),
           child: const Text('Test l2_full_path.riv'),
+        ),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const IslandCarouselScreen(),
+            ),
+          ),
+          child: const Text('Test Island Carousel (ela/math)'),
         ),
         const SizedBox(height: 20),
         // const Text(
